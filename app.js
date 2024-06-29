@@ -5,9 +5,8 @@ const ejs = require('ejs')
 const passport = require('passport')
 const localPassort = require('passport-local')
 const crypto = require('crypto')
-const db = require("./data/db.json")
-const { ifError } = require('assert')
-
+const db = require("./db/db.json")
+const path = require('path')
 // requiring the additional dependencies 
 
 const logger = require('morgan')
@@ -31,7 +30,7 @@ app.use(session({
     secret : 'keyboard cat',
     resave :false,
     saveUninitialized : false,
-    store : new SDLiteStore({db: 'sessions.db', dir:'./var/db'})
+    store : new SDLiteStore({db: 'sessions.db', dir:'./db'})
 }))
 
 app.use(passport.authenticate("session"))
@@ -50,15 +49,24 @@ app.get('/', (req, res) => {
     res.render('index');
 })
 
-app.get('/login', (req, res) => {
-    res.render('login');
+app.get('/admin/user', (req, res) => {
+    res.render('admin/user');
+})
+app.get('/auth/profile', (req, res) => {
+    res.render('auth/profile');
+})
+app.get('/auth/signup', (req, res) => {
+    res.render('auth/signup');
+})
+app.get('/auth/login', (req, res) => {
+    res.render('auth/login');
 })
 
 // verifying password
 passport.use(new localPassort(function verify(username, password, action){
     // finding the appropiate element in the table
 
-const user = db.find(user => user.email === username)
+const user = db.find(user => user.username === username)
 
 if(err){return action(err)}
 if(!user){return action(null, false, {message : 'wrong username or passwords'}
@@ -77,10 +85,10 @@ crypto.pbkdf2(password, user.password,310000, saltRounds,'sha256', function(err,
 passport.serializeUser(function(user, action){
     process.nextTick(function(){
 
-        action(null, {id:user.id, username: user.username})
+        action(null, {id:user.id, username: user.username, password: user.password})
     })
 })
-assport.deserializeUser(function(user, action){
+passport.deserializeUser(function(user, action){
     process.nextTick(function(){
 
         action(null,user)
@@ -88,9 +96,10 @@ assport.deserializeUser(function(user, action){
 })
 
 
-app.post('/login/password', passport.authenticate('local',{
+app.post('/auth/login/password', passport.authenticate('local',{
     successRedirect : '/',
-    failureRedirect : '/login'
+    failureRedirect : '/login',
+    failureMessage : "mot de passe incorrect"
 }))
 
 // establish session
